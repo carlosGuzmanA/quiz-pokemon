@@ -1,0 +1,87 @@
+<!-- 
+    Author: aulerjbailey
+    Version: 1.0.0
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3b4cca">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>¿QUIÉN ES ESE POKÉMON?</title>
+    <!-- STYLES CSS FILE -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="layout-container">
+        <!-- Controles móviles fijos en la parte superior -->
+        <div class="mobile-controls">
+            <!-- Checkbox Container -->
+            <div class="checkbox-container">
+                <label>
+                    <input type="checkbox" id="check-sonido-pregunta" checked> ¿Sonido Pregunta?
+                </label>
+            </div>
+            
+            <!-- Nuevo Pokémon Button -->
+            <button id="nuevo-pokemon-btn">Nuevo Pokémon</button>
+            
+            <!-- Select para regiones (solo móvil) -->
+            <div class="region-select-container">
+                <select class="region-select" id="region-select">
+                    <option value="1-1025">Todos</option>
+                    <option value="1-151">Kanto</option>
+                    <option value="152-251">Johto</option>
+                    <option value="252-386">Hoenn</option>
+                    <option value="387-493">Sinnoh</option>
+                    <option value="494-649">Unova</option>
+                    <option value="650-721">Kalos</option>
+                    <option value="722-809">Alola</option>
+                    <option value="810-905">Galar</option>
+                    <option value="906-1025">Paldea</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- IMAGE -->
+            <div class="position">
+                <img id="pokemon-image" style="width: 700px;" src="" class="image-dark" title="" alt="Pokémon silhouette" />
+            </div>
+        </div>
+        
+        <!-- Botones de regiones (solo desktop) -->
+        <div class="botones-regiones-vertical">
+            <!-- Checkbox Container -->
+            <div class="checkbox-container">
+                <label>
+                    <input type="checkbox" id="check-sonido-pregunta-desktop" checked> ¿Sonido Pregunta?
+                </label>
+            </div>
+            
+            <!-- Nuevo Pokémon Button -->
+            <button id="nuevo-pokemon-btn-desktop">Nuevo Pokémon</button>
+            
+            <!-- Region Buttons -->
+            <button id="active" class="region-btn" data-min="1" data-max="1025">Todos</button>
+            <button class="region-btn" data-min="1" data-max="151">Kanto</button>
+            <button class="region-btn" data-min="152" data-max="251">Johto</button>
+            <button class="region-btn" data-min="252" data-max="386">Hoenn</button>
+            <button class="region-btn" data-min="387" data-max="493">Sinnoh</button>
+            <button class="region-btn" data-min="494" data-max="649">Unova</button>
+            <button class="region-btn" data-min="650" data-max="721">Kalos</button>
+            <button class="region-btn" data-min="722" data-max="809">Alola</button>
+            <button class="region-btn" data-min="810" data-max="905">Galar</button>
+            <button class="region-btn" data-min="906" data-max="1025">Paldea</button>
+        </div>
+    </div>
+    
+    <!-- JQUERY -->
+    <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+    <!-- MAIN JS FILE -->
+    <script src="js/main.js"></script>
+</body>
+</html>
