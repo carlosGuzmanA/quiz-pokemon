@@ -327,7 +327,7 @@ body {
     /* Controles fijos en la parte superior */
     .mobile-controls {
         position: sticky;
-        top: 0;
+        top: var(--nav-height);
         width: 100vw;
         /* background: rgba(255,255,255,0.98); */
         backdrop-filter: blur(10px);
@@ -652,5 +652,262 @@ body {
         0%, 100% { opacity: 0.3; }
         50% { opacity: 0.8; }
     }
+}
+
+/* ===== Nav superior y secciones ===== */
+:root {
+  --nav-height: 64px;
+}
+
+body {
+  padding-top: var(--nav-height);
+}
+
+.top-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  z-index: 200;
+}
+
+.top-nav .nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.top-nav .brand {
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #3b4cca;
+}
+
+.top-nav .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.top-nav a {
+  color: #3b4cca;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.top-nav a.active,
+.top-nav a:hover {
+  background: #3b4cca;
+  color: #fff;
+}
+
+.dropdown { position: relative; }
+.dropdown > a::after { content: "▾"; margin-left: 6px; }
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(255,255,255,0.98);
+  border: 1px solid rgba(59,76,202,0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  display: none;
+  min-width: 200px;
+  padding: 8px;
+  z-index: 300;
+}
+
+.dropdown:hover .dropdown-menu { display: block; }
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #3b4cca;
+}
+
+.dropdown-menu a:hover { background: rgba(59,76,202,0.08); }
+
+.section { display: none; }
+.section.active { display: block; }
+
+/* Grid de juegos */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.game-card {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(59,76,202,0.15);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+.game-wrapper { 
+  max-width: 900px; 
+  padding: 24px; 
+  margin: 0 auto; 
+}
+
+.back-to-games {
+  background: #3b4cca;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+/* ===== Memorize (Juego de Memoria) ===== */
+.memorize-controls { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 12px; 
+  margin-bottom: 16px; 
+}
+
+.mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.mode-tab { 
+  background: rgba(255,255,255,0.9); 
+  border: 1px solid rgba(59,76,202,0.3); 
+  color: #3b4cca; 
+  padding: 8px 12px; 
+  border-radius: 10px; 
+  cursor: pointer; 
+  font-weight: 600; 
+}
+.mode-tab.active, .mode-tab:hover { background: #3b4cca; color: #fff; }
+
+.control-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.control-row label { font-weight: 700; color: #3b4cca; }
+.control-row select, .control-row input[type="text"] { 
+  padding: 8px 10px; 
+  border: 1px solid rgba(59,76,202,0.3); 
+  border-radius: 10px; 
+  min-width: 180px; 
+}
+.control-row button { 
+  padding: 8px 12px; 
+  border-radius: 10px; 
+  border: none; 
+  cursor: pointer; 
+  font-weight: 700; 
+}
+.control-row button.primary { background: #3b4cca; color: #fff; }
+.control-row button.secondary { background: #ffcb05; color: #222; }
+
+.search-container { position: relative; flex: 1; min-width: 200px; }
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(255,255,255,0.98);
+  border: 1px solid rgba(59,76,202,0.2);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+}
+.autocomplete-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(59,76,202,0.1);
+  transition: background 0.2s ease;
+}
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background: rgba(59,76,202,0.1);
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item .pokemon-name {
+  font-weight: 600;
+  color: #3b4cca;
+}
+.autocomplete-item .pokemon-id {
+  font-size: 0.9em;
+  color: #666;
+  margin-left: 8px;
+}
+
+.selected-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.selected-item { 
+  display: flex; align-items: center; gap: 6px; 
+  background: rgba(255,255,255,0.9); 
+  border: 1px solid rgba(59,76,202,0.2); 
+  padding: 6px 10px; border-radius: 10px; 
+}
+.selected-item img { width: 28px; height: 28px; object-fit: contain; }
+.selected-item .remove { cursor: pointer; color: #ff4757; font-weight: 800; }
+
+.memory-grid { 
+  display: grid; 
+  gap: 10px; 
+  margin-top: 12px; 
+  justify-content: center; 
+}
+
+/* Layouts según cantidad de cartas */
+.memory-grid.size-8 { grid-template-columns: repeat(4, minmax(70px, 110px)); }
+.memory-grid.size-12 { grid-template-columns: repeat(4, minmax(70px, 110px)); }
+.memory-grid.size-24 { grid-template-columns: repeat(6, minmax(60px, 100px)); }
+
+.memory-card { 
+  width: 100%; aspect-ratio: 3/4; 
+  position: relative; 
+  transform-style: preserve-3d; 
+  transition: transform 0.4s ease; 
+  cursor: pointer; 
+}
+.memory-card.flipped { transform: rotateY(180deg); }
+.memory-card.matched { outline: 3px solid #2ed573; border-radius: 8px; }
+
+.card-face { 
+  position: absolute; inset: 0; 
+  backface-visibility: hidden; 
+  border-radius: 8px; 
+  display: flex; align-items: center; justify-content: center; 
+  background: rgba(255,255,255,0.95);
+  border: 1px solid rgba(59,76,202,0.2);
+}
+.card-back { 
+  background: linear-gradient(135deg, #3b4cca 0%, #ffcb05 100%);
+  color: #fff; font-weight: 800; font-size: 1.2rem;
+}
+.card-front { transform: rotateY(180deg); }
+.card-front img { max-width: 90%; max-height: 90%; object-fit: contain; }
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .memory-grid.size-8 { grid-template-columns: repeat(4, minmax(60px, 1fr)); }
+  .memory-grid.size-12 { grid-template-columns: repeat(4, minmax(60px, 1fr)); }
+  .memory-grid.size-24 { grid-template-columns: repeat(4, minmax(55px, 1fr)); }
 }
 

@@ -304,6 +304,15 @@ function optimizeMobileLayout() {
   }
 }
 
+// Navegación superior
+function showSection(sectionId) {
+  $(".section").removeClass("active");
+  $(sectionId).addClass("active");
+  if (sectionId !== "#section-quiz" && timerInterval) {
+    clearInterval(timerInterval);
+  }
+}
+
 // Event Listeners
 $(document).ready(function () {
   // Verificar si es móvil al cargar
@@ -443,4 +452,471 @@ $(document).ready(function () {
   document.addEventListener('gestureend', function(e) {
     e.preventDefault();
   });
+
+  // Navegación superior
+  $(".nav-link[data-nav='quiz']").on("click", function(e){
+    e.preventDefault();
+    showSection("#section-quiz");
+    $(".nav-link").removeClass("active");
+    $(this).addClass("active");
+  });
+
+  $(".nav-link[data-nav='games']").on("click", function(e){
+    e.preventDefault();
+    showSection("#section-games");
+    $(".nav-link").removeClass("active");
+    $(this).addClass("active");
+  });
+
+  $("[data-game='tictactoe']").on("click", function(e){
+    e.preventDefault();
+    showSection("#section-tictactoe");
+    $(".nav-link").removeClass("active");
+    $(".nav-link[data-nav='games']").addClass("active");
+  });
+
+  $("[data-game='memorize']").on("click", function(e){
+    e.preventDefault();
+    showSection("#section-memorize");
+    $(".nav-link").removeClass("active");
+    $(".nav-link[data-nav='games']").addClass("active");
+  });
+
+  $(document).on("click", ".back-to-games", function(e){
+    e.preventDefault();
+    showSection("#section-games");
+    $(".nav-link").removeClass("active");
+    $(".nav-link[data-nav='games']").addClass("active");
+  });
 });
+
+// ===== Memorize (Juego de Memoria)
+const memorizeState = {
+  mode: 'random', // 'random' | 'search'
+  size: 8, // número de cartas totales: 8, 12, 24
+  selectedPokemons: [], // [{id, name, img}]
+  deck: [], // cartas duplicadas y mezcladas
+  lockBoard: false,
+  firstCard: null,
+  secondCard: null,
+  matches: 0,
+  allPokemons: [], // Lista completa de Pokémon para autocompletado
+  autocompleteIndex: -1, // Índice del item seleccionado en autocompletado
+};
+
+function setMemorizeMode(mode) {
+  memorizeState.mode = mode;
+  const $tabs = $(".mode-tab");
+  $tabs.removeClass("active");
+  $tabs.filter(`[data-mode='${mode}']`).addClass("active");
+  if (mode === 'random') {
+    $(".search-panel").hide();
+  } else {
+    $(".search-panel").show();
+  }
+}
+
+function setMemorizeSize(size) {
+  memorizeState.size = Number(size);
+  const pairs = memorizeState.size / 2;
+  if (memorizeState.selectedPokemons.length > pairs) {
+    memorizeState.selectedPokemons = memorizeState.selectedPokemons.slice(0, pairs);
+    updateSelectedListUI();
+    showNotification("Se ajustó la lista al nuevo tamaño de juego.", "info");
+  }
+}
+
+async function fetchPokemonByIdOrName(identifier) {
+  try {
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${identifier}`);
+    if (!res.ok) throw new Error('not ok');
+    const data = await res.json();
+    return {
+      id: data.id,
+      name: data.species.name,
+      img: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${data.id}.png`,
+      sound: data?.cries?.latest || null
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function buildRandomPokemonList(pairsNeeded) {
+  // Usar el rango actual de regiones del quiz para coherencia
+  const maxApiId = 1025;
+  const minId = regionMin;
+  const maxId = Math.min(regionMax, maxApiId);
+  const chosen = new Set();
+  const result = [];
+  let guard = 0;
+  while (result.length < pairsNeeded && guard < 5000) {
+    const id = Math.floor(Math.random() * (maxId - minId + 1)) + minId;
+    if (chosen.has(id)) { guard++; continue; }
+    const poke = await fetchPokemonByIdOrName(id);
+    if (poke) {
+      chosen.add(id);
+      result.push(poke);
+    }
+    guard++;
+  }
+  return result;
+}
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function renderMemoryBoard() {
+  const size = memorizeState.size;
+  const pairs = size / 2;
+  const board = $("#memorize-board");
+  board.empty();
+  board.removeClass("size-8 size-12 size-24");
+  board.addClass(`size-${size}`);
+
+  // Crear mazo duplicando las selecciones y mezclando
+  const duplicated = [];
+  for (const p of memorizeState.selectedPokemons) {
+    duplicated.push({ key: `${p.id}-a`, id: p.id, name: p.name, img: p.img, sound: p.sound });
+    duplicated.push({ key: `${p.id}-b`, id: p.id, name: p.name, img: p.img, sound: p.sound });
+  }
+  memorizeState.deck = shuffleArray(duplicated);
+  memorizeState.lockBoard = false;
+  memorizeState.firstCard = null;
+  memorizeState.secondCard = null;
+  memorizeState.matches = 0;
+
+  // Renderizar cartas
+  for (const card of memorizeState.deck) {
+    const $card = $(`
+      <div class="memory-card" data-id="${card.id}" data-key="${card.key}" data-sound="${card.sound ? card.sound : ''}">
+        <div class="card-face card-back">?</div>
+        <div class="card-face card-front"><img src="${card.img}" alt="${card.name}" /></div>
+      </div>
+    `);
+    board.append($card);
+  }
+}
+
+async function startRandomMemorize() {
+  const size = memorizeState.size;
+  const pairs = size / 2;
+  memorizeState.selectedPokemons = await buildRandomPokemonList(pairs);
+  if (memorizeState.selectedPokemons.length !== pairs) {
+    showNotification("No se pudo completar el mazo al azar.", "error");
+    return;
+  }
+  renderMemoryBoard();
+}
+
+function updateSelectedListUI() {
+  const container = $("#memorize-selected-list");
+  container.empty();
+  for (const p of memorizeState.selectedPokemons) {
+    const $item = $(`
+      <div class="selected-item" data-id="${p.id}">
+        <img src="${p.img}" alt="${p.name}" />
+        <span>${p.name}</span>
+        <span class="remove" title="Quitar">×</span>
+      </div>
+    `);
+    container.append($item);
+  }
+}
+
+async function addPokemonByName(name) {
+  const normalized = (name || '').trim().toLowerCase();
+  if (!normalized) return;
+  if (memorizeState.selectedPokemons.some(p => p.name === normalized)) {
+    showNotification("Ese Pokémon ya está en la lista.", "info");
+    return;
+  }
+  const poke = await fetchPokemonByIdOrName(normalized);
+  if (!poke) {
+    showNotification("Pokémon no encontrado.", "error");
+    return;
+  }
+  memorizeState.selectedPokemons.push(poke);
+  updateSelectedListUI();
+}
+
+function removeSelectedPokemon(id) {
+  memorizeState.selectedPokemons = memorizeState.selectedPokemons.filter(p => p.id !== Number(id));
+  updateSelectedListUI();
+}
+
+async function completeSelectionWithRandom() {
+  const size = memorizeState.size;
+  const neededPairs = size / 2;
+  const missing = neededPairs - memorizeState.selectedPokemons.length;
+  if (missing <= 0) return;
+
+  const taken = new Set(memorizeState.selectedPokemons.map(p => p.id));
+  const maxApiId = 1025;
+  const minId = regionMin;
+  const maxId = Math.min(regionMax, maxApiId);
+  let guard = 0;
+  while (memorizeState.selectedPokemons.length < neededPairs && guard < 5000) {
+    const id = Math.floor(Math.random() * (maxId - minId + 1)) + minId;
+    if (taken.has(id)) { guard++; continue; }
+    const poke = await fetchPokemonByIdOrName(id);
+    if (poke) {
+      taken.add(id);
+      memorizeState.selectedPokemons.push(poke);
+    }
+    guard++;
+  }
+  updateSelectedListUI();
+}
+
+function canStartMemorize() {
+  return memorizeState.selectedPokemons.length === memorizeState.size / 2;
+}
+
+function onMemoryCardClick($card) {
+  if (memorizeState.lockBoard) return;
+  if ($card.hasClass('flipped')) return;
+
+  $card.addClass('flipped');
+
+  if (!memorizeState.firstCard) {
+    memorizeState.firstCard = $card;
+    return;
+  }
+
+  memorizeState.secondCard = $card;
+  checkForMatch();
+}
+
+function checkForMatch() {
+  const firstId = memorizeState.firstCard.data('id');
+  const secondId = memorizeState.secondCard.data('id');
+  const isMatch = firstId === secondId;
+
+  if (isMatch) {
+    memorizeState.firstCard.addClass('matched');
+    memorizeState.secondCard.addClass('matched');
+    // Reproducir sonido del Pokémon al hacer match
+    const pokemonId = String(firstId).padStart(3, '0');
+    const soundUrl = memorizeState.firstCard.data('sound') || memorizeState.secondCard.data('sound');
+    playPokemonSound(pokemonId, soundUrl);
+
+    memorizeState.matches += 1;
+    resetTurn();
+    // ¿Ganó?
+    if (memorizeState.matches === memorizeState.size / 2) {
+      showNotification("¡Completaste todas las parejas!", "success");
+    }
+  } else {
+    memorizeState.lockBoard = true;
+    setTimeout(() => {
+      memorizeState.firstCard.removeClass('flipped');
+      memorizeState.secondCard.removeClass('flipped');
+      resetTurn();
+    }, 800);
+  }
+}
+
+function resetTurn() {
+  memorizeState.firstCard = null;
+  memorizeState.secondCard = null;
+  memorizeState.lockBoard = false;
+}
+
+function wireMemorizeHandlers() {
+  // Tabs modo
+  $(document).on('click', '.mode-tab', function() {
+    const mode = $(this).data('mode');
+    setMemorizeMode(mode);
+  });
+
+  // Selector de tamaño
+  $(document).on('change', '#memorize-size', function() {
+    setMemorizeSize($(this).val());
+  });
+
+  // Generar al azar
+  $(document).on('click', '#memorize-random-btn', async function() {
+    setMemorizeMode('random');
+    await startRandomMemorize();
+  });
+
+  // Reiniciar
+  $(document).on('click', '#memorize-reset-btn', function() {
+    $("#memorize-board").empty();
+    memorizeState.selectedPokemons = [];
+    memorizeState.deck = [];
+    memorizeState.matches = 0;
+    updateSelectedListUI();
+  });
+
+  // Autocompletado - Input de búsqueda
+  $(document).on('input', '#memorize-search-input', function() {
+    const query = $(this).val();
+    const filtered = filterPokemons(query);
+    showAutocomplete(filtered);
+  });
+
+  // Autocompletado - Click en item
+  $(document).on('click', '.autocomplete-item', function() {
+    const pokemonId = $(this).data('id');
+    const pokemonName = $(this).data('name');
+    selectPokemonFromAutocomplete(pokemonId, pokemonName);
+  });
+
+  // Autocompletado - Navegación con teclado
+  $(document).on('keydown', '#memorize-search-input', function(e) {
+    const items = $('.autocomplete-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      navigateAutocomplete('down');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      navigateAutocomplete('up');
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (memorizeState.autocompleteIndex >= 0) {
+        const selectedItem = items.eq(memorizeState.autocompleteIndex);
+        const pokemonId = selectedItem.data('id');
+        const pokemonName = selectedItem.data('name');
+        selectPokemonFromAutocomplete(pokemonId, pokemonName);
+      }
+    } else if (e.key === 'Escape') {
+      hideAutocomplete();
+    }
+  });
+
+  // Ocultar autocompletado al hacer click fuera
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.search-container').length) {
+      hideAutocomplete();
+    }
+  });
+
+  // Completar al azar los faltantes
+  $(document).on('click', '#memorize-complete-random-btn', async function() {
+    await completeSelectionWithRandom();
+  });
+
+  // Empezar juego (con selección actual)
+  $(document).on('click', '#memorize-start-btn', function() {
+    if (!canStartMemorize()) {
+      showNotification("Debes tener la cantidad exacta de parejas para el tamaño elegido.", "info");
+      return;
+    }
+    renderMemoryBoard();
+  });
+
+  // Quitar de la lista seleccionada
+  $(document).on('click', '.selected-item .remove', function() {
+    const id = $(this).closest('.selected-item').data('id');
+    removeSelectedPokemon(id);
+  });
+
+  // Click en cartas
+  $(document).on('click', '.memory-card', function() {
+    onMemoryCardClick($(this));
+  });
+}
+
+// Inicializa handlers de memorize al cargar
+$(document).ready(function () {
+  wireMemorizeHandlers();
+  loadAllPokemons(); // Cargar lista completa de Pokémon
+});
+
+// Cargar lista completa de Pokémon para autocompletado
+async function loadAllPokemons() {
+  try {
+    const response = await fetch('https://pokeapi.co/api/v2/pokemon/?limit=1025');
+    const data = await response.json();
+    memorizeState.allPokemons = data.results.map((pokemon, index) => ({
+      id: index + 1,
+      name: pokemon.name,
+      url: pokemon.url
+    }));
+  } catch (error) {
+    console.error('Error cargando lista de Pokémon:', error);
+  }
+}
+
+// Filtrar Pokémon por nombre
+function filterPokemons(query) {
+  if (!query || query.length < 1) return [];
+  const normalizedQuery = query.toLowerCase();
+  return memorizeState.allPokemons
+    .filter(pokemon => pokemon.name.includes(normalizedQuery))
+    .slice(0, 10); // Limitar a 10 resultados
+}
+
+// Mostrar autocompletado
+function showAutocomplete(filteredPokemons) {
+  const dropdown = $('#memorize-autocomplete');
+  dropdown.empty();
+  
+  if (filteredPokemons.length === 0) {
+    dropdown.hide();
+    return;
+  }
+  
+  filteredPokemons.forEach((pokemon, index) => {
+    const item = $(`
+      <div class="autocomplete-item" data-id="${pokemon.id}" data-name="${pokemon.name}">
+        <span class="pokemon-name">${pokemon.name}</span>
+        <span class="pokemon-id">#${pokemon.id.toString().padStart(3, '0')}</span>
+      </div>
+    `);
+    dropdown.append(item);
+  });
+  
+  dropdown.show();
+  memorizeState.autocompleteIndex = -1;
+}
+
+// Ocultar autocompletado
+function hideAutocomplete() {
+  $('#memorize-autocomplete').hide();
+  memorizeState.autocompleteIndex = -1;
+}
+
+// Seleccionar Pokémon del autocompletado
+async function selectPokemonFromAutocomplete(pokemonId, pokemonName) {
+  // Verificar si ya está en la lista
+  if (memorizeState.selectedPokemons.some(p => p.id === pokemonId)) {
+    showNotification("Ese Pokémon ya está en la lista.", "info");
+    return;
+  }
+  
+  // Obtener datos completos del Pokémon
+  const pokemon = await fetchPokemonByIdOrName(pokemonId);
+  if (pokemon) {
+    memorizeState.selectedPokemons.push(pokemon);
+    updateSelectedListUI();
+    $('#memorize-search-input').val('');
+    hideAutocomplete();
+  }
+}
+
+// Navegar autocompletado con teclado
+function navigateAutocomplete(direction) {
+  const items = $('.autocomplete-item');
+  if (items.length === 0) return;
+  
+  if (direction === 'down') {
+    memorizeState.autocompleteIndex = Math.min(memorizeState.autocompleteIndex + 1, items.length - 1);
+  } else if (direction === 'up') {
+    memorizeState.autocompleteIndex = Math.max(memorizeState.autocompleteIndex - 1, -1);
+  }
+  
+  items.removeClass('selected');
+  if (memorizeState.autocompleteIndex >= 0) {
+    items.eq(memorizeState.autocompleteIndex).addClass('selected');
+  }
+}

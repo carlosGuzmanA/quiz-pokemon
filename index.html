@@ -16,68 +16,143 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="layout-container">
-        <!-- Controles móviles fijos en la parte superior -->
-        <div class="mobile-controls">
-            <!-- Checkbox Container -->
-            <div class="checkbox-container">
-                <label>
-                    <input type="checkbox" id="check-sonido-pregunta" checked> ¿Sonido Pregunta?
-                </label>
-            </div>
-            
-            <!-- Nuevo Pokémon Button -->
-            <button id="nuevo-pokemon-btn">Nuevo Pokémon</button>
-            
-            <!-- Select para regiones (solo móvil) -->
-            <div class="region-select-container">
-                <select class="region-select" id="region-select">
-                    <option value="1-1025">Todos</option>
-                    <option value="1-151">Kanto</option>
-                    <option value="152-251">Johto</option>
-                    <option value="252-386">Hoenn</option>
-                    <option value="387-493">Sinnoh</option>
-                    <option value="494-649">Unova</option>
-                    <option value="650-721">Kalos</option>
-                    <option value="722-809">Alola</option>
-                    <option value="810-905">Galar</option>
-                    <option value="906-1025">Paldea</option>
-                </select>
+    <nav class="top-nav">
+        <div class="nav-container">
+            <div class="brand">PokéJuegos</div>
+            <div class="nav-links">
+                <a href="#" class="nav-link active" data-nav="quiz">¿Quién es ese Pokémon?</a>
+                <div class="dropdown">
+                    <a href="#" class="nav-link" data-nav="games">Juegos</a>
+                    <div class="dropdown-menu">
+                        <a href="#" data-game="tictactoe">Tic Tac Toe</a>
+                        <a href="#" data-game="memorize">Memoriza</a>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="main-content">
-            <!-- IMAGE -->
-            <div class="position">
-                <img id="pokemon-image" style="width: 700px;" src="" class="image-dark" title="" alt="Pokémon silhouette" />
-            </div>
-        </div>
-        
-        <!-- Botones de regiones (solo desktop) -->
-        <div class="botones-regiones-vertical">
-            <!-- Checkbox Container -->
-            <div class="checkbox-container">
-                <label>
-                    <input type="checkbox" id="check-sonido-pregunta-desktop" checked> ¿Sonido Pregunta?
-                </label>
+    </nav>
+    <section id="section-quiz" class="section active">
+        <div class="layout-container">
+            <!-- Controles móviles fijos en la parte superior -->
+            <div class="mobile-controls">
+                <!-- Checkbox Container -->
+                <div class="checkbox-container">
+                    <label>
+                        <input type="checkbox" id="check-sonido-pregunta" checked> ¿Sonido Pregunta?
+                    </label>
+                </div>
+                
+                <!-- Nuevo Pokémon Button -->
+                <button id="nuevo-pokemon-btn">Nuevo Pokémon</button>
+                
+                <!-- Select para regiones (solo móvil) -->
+                <div class="region-select-container">
+                    <select class="region-select" id="region-select">
+                        <option value="1-1025">Todos</option>
+                        <option value="1-151">Kanto</option>
+                        <option value="152-251">Johto</option>
+                        <option value="252-386">Hoenn</option>
+                        <option value="387-493">Sinnoh</option>
+                        <option value="494-649">Unova</option>
+                        <option value="650-721">Kalos</option>
+                        <option value="722-809">Alola</option>
+                        <option value="810-905">Galar</option>
+                        <option value="906-1025">Paldea</option>
+                    </select>
+                </div>
             </div>
             
-            <!-- Nuevo Pokémon Button -->
-            <button id="nuevo-pokemon-btn-desktop">Nuevo Pokémon</button>
+            <div class="main-content">
+                <!-- IMAGE -->
+                <div class="position">
+                    <img id="pokemon-image" style="width: 700px;" src="" class="image-dark" title="" alt="Pokémon silhouette" />
+                </div>
+            </div>
             
-            <!-- Region Buttons -->
-            <button id="active" class="region-btn" data-min="1" data-max="1025">Todos</button>
-            <button class="region-btn" data-min="1" data-max="151">Kanto</button>
-            <button class="region-btn" data-min="152" data-max="251">Johto</button>
-            <button class="region-btn" data-min="252" data-max="386">Hoenn</button>
-            <button class="region-btn" data-min="387" data-max="493">Sinnoh</button>
-            <button class="region-btn" data-min="494" data-max="649">Unova</button>
-            <button class="region-btn" data-min="650" data-max="721">Kalos</button>
-            <button class="region-btn" data-min="722" data-max="809">Alola</button>
-            <button class="region-btn" data-min="810" data-max="905">Galar</button>
-            <button class="region-btn" data-min="906" data-max="1025">Paldea</button>
+            <!-- Botones de regiones (solo desktop) -->
+            <div class="botones-regiones-vertical">
+                <!-- Checkbox Container -->
+                <div class="checkbox-container">
+                    <label>
+                        <input type="checkbox" id="check-sonido-pregunta-desktop" checked> ¿Sonido Pregunta?
+                    </label>
+                </div>
+                
+                <!-- Nuevo Pokémon Button -->
+                <button id="nuevo-pokemon-btn-desktop">Nuevo Pokémon</button>
+                
+                <!-- Region Buttons -->
+                <button id="active" class="region-btn" data-min="1" data-max="1025">Todos</button>
+                <button class="region-btn" data-min="1" data-max="151">Kanto</button>
+                <button class="region-btn" data-min="152" data-max="251">Johto</button>
+                <button class="region-btn" data-min="252" data-max="386">Hoenn</button>
+                <button class="region-btn" data-min="387" data-max="493">Sinnoh</button>
+                <button class="region-btn" data-min="494" data-max="649">Unova</button>
+                <button class="region-btn" data-min="650" data-max="721">Kalos</button>
+                <button class="region-btn" data-min="722" data-max="809">Alola</button>
+                <button class="region-btn" data-min="810" data-max="905">Galar</button>
+                <button class="region-btn" data-min="906" data-max="1025">Paldea</button>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <section id="section-games" class="section">
+        <div class="games-grid">
+            <div class="game-card" data-game="tictactoe">
+                <h3>Tic Tac Toe</h3>
+                <p>Clásico tres en raya con Pokémon.</p>
+            </div>
+            <div class="game-card" data-game="memorize">
+                <h3>Memoriza</h3>
+                <p>Encuentra las parejas de Pokémon.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="section-tictactoe" class="section">
+        <div class="game-wrapper">
+            <button class="back-to-games">← Volver a Juegos</button>
+            <h2>Tic Tac Toe</h2>
+            <p>Disponible próximamente.</p>
+        </div>
+    </section>
+
+    <section id="section-memorize" class="section">
+        <div class="game-wrapper">
+            <button class="back-to-games">← Volver a Juegos</button>
+            <h2>Memoriza</h2>
+            <div class="memorize-controls">
+                <div class="mode-tabs">
+                    <button class="mode-tab active" data-mode="random">Al azar</button>
+                    <button class="mode-tab" data-mode="search">Buscar por nombre</button>
+                </div>
+                <div class="control-row">
+                    <label for="memorize-size">Cartas:</label>
+                    <select id="memorize-size">
+                        <option value="8">8</option>
+                        <option value="12">12</option>
+                        <option value="24">24</option>
+                    </select>
+                    <button id="memorize-random-btn" class="primary">Generar al azar</button>
+                    <button id="memorize-reset-btn" class="secondary">Reiniciar</button>
+                </div>
+
+                <div class="search-panel" style="display:none;">
+                    <div class="control-row">
+                        <div class="search-container">
+                            <input type="text" id="memorize-search-input" placeholder="Buscar Pokémon..." />
+                            <div id="memorize-autocomplete" class="autocomplete-dropdown"></div>
+                        </div>
+                        <button id="memorize-complete-random-btn" class="secondary">Completar al azar</button>
+                        <button id="memorize-start-btn" class="primary">Empezar juego</button>
+                    </div>
+                    <div class="selected-list" id="memorize-selected-list"></div>
+                </div>
+            </div>
+
+            <div id="memorize-board" class="memory-grid"></div>
+        </div>
+    </section>
     
     <!-- JQUERY -->
     <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
