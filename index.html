@@ -113,7 +113,68 @@
         <div class="game-wrapper">
             <button class="back-to-games">← Volver a Juegos</button>
             <h2>Tic Tac Toe</h2>
-            <p>Disponible próximamente.</p>
+            
+            <div class="tictactoe-setup" id="tictactoe-setup">
+                <div class="player-selection">
+                    <div class="player-card">
+                        <h3>Jugador 1</h3>
+                        <div class="search-container">
+                            <input type="text" id="player1-search" placeholder="Buscar Pokémon..." />
+                            <div id="player1-autocomplete" class="autocomplete-dropdown"></div>
+                        </div>
+                        <div class="selected-pokemon" id="player1-selected">
+                            <div class="placeholder">Sin Pokémon seleccionado</div>
+                        </div>
+                    </div>
+                    
+                    <div class="vs-divider">VS</div>
+                    
+                    <div class="player-card">
+                        <h3>Jugador 2</h3>
+                        <div class="search-container">
+                            <input type="text" id="player2-search" placeholder="Buscar Pokémon..." />
+                            <div id="player2-autocomplete" class="autocomplete-dropdown"></div>
+                        </div>
+                        <div class="selected-pokemon" id="player2-selected">
+                            <div class="placeholder">Sin Pokémon seleccionado</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="start-tictactoe-btn" class="primary" disabled>Empezar Juego</button>
+            </div>
+            
+            <div class="tictactoe-game" id="tictactoe-game" style="display:none;">
+                <div class="game-header">
+                    <div class="current-player" id="current-player">
+                        <span class="player-label">Turno de:</span>
+                        <div class="player-info">
+                            <img id="current-player-img" src="" alt="" />
+                            <span id="current-player-name"></span>
+                        </div>
+                    </div>
+                    <button id="new-game-btn" class="secondary">Nuevo Juego</button>
+                </div>
+                
+                <div class="tictactoe-board" id="tictactoe-board"></div>
+                
+                <div class="game-stats">
+                    <div class="stat-card">
+                        <img id="player1-stat-img" src="" alt="" />
+                        <div class="stat-info">
+                            <span class="stat-name" id="player1-stat-name"></span>
+                            <span class="stat-wins" id="player1-stat-wins">0 victorias</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <img id="player2-stat-img" src="" alt="" />
+                        <div class="stat-info">
+                            <span class="stat-name" id="player2-stat-name"></span>
+                            <span class="stat-wins" id="player2-stat-wins">0 victorias</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 

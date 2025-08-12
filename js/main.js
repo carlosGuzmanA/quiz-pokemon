@@ -829,6 +829,7 @@ function wireMemorizeHandlers() {
 // Inicializa handlers de memorize al cargar
 $(document).ready(function () {
   wireMemorizeHandlers();
+  wireTicTacToeHandlers();
   loadAllPokemons(); // Cargar lista completa de Pokémon
 });
 
@@ -919,4 +920,288 @@ function navigateAutocomplete(direction) {
   if (memorizeState.autocompleteIndex >= 0) {
     items.eq(memorizeState.autocompleteIndex).addClass('selected');
   }
+}
+
+// ===== Tic Tac Toe
+const tictactoeState = {
+  player1: null, // {id, name, img, sound}
+  player2: null, // {id, name, img, sound}
+  currentPlayer: 1, // 1 o 2
+  board: Array(9).fill(null), // 3x3 grid
+  gameActive: false,
+  stats: {
+    player1Wins: 0,
+    player2Wins: 0
+  }
+};
+
+// Crear tablero de Tic Tac Toe
+function createTicTacToeBoard() {
+  const board = $('#tictactoe-board');
+  board.empty();
+  
+  for (let i = 0; i < 9; i++) {
+    const cell = $(`<div class="tictactoe-cell" data-index="${i}"></div>`);
+    board.append(cell);
+  }
+}
+
+// Actualizar UI del jugador actual
+function updateCurrentPlayerUI() {
+  const currentPlayer = tictactoeState.currentPlayer === 1 ? tictactoeState.player1 : tictactoeState.player2;
+  $('#current-player-img').attr('src', currentPlayer.img);
+  $('#current-player-name').text(currentPlayer.name);
+}
+
+// Actualizar estadísticas
+function updateStatsUI() {
+  if (tictactoeState.player1) {
+    $('#player1-stat-img').attr('src', tictactoeState.player1.img);
+    $('#player1-stat-name').text(tictactoeState.player1.name);
+    $('#player1-stat-wins').text(`${tictactoeState.stats.player1Wins} victorias`);
+  }
+  
+  if (tictactoeState.player2) {
+    $('#player2-stat-img').attr('src', tictactoeState.player2.img);
+    $('#player2-stat-name').text(tictactoeState.player2.name);
+    $('#player2-stat-wins').text(`${tictactoeState.stats.player2Wins} victorias`);
+  }
+}
+
+// Verificar si hay un ganador
+function checkWinner() {
+  const board = tictactoeState.board;
+  const lines = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], // horizontales
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // verticales
+    [0, 4, 8], [2, 4, 6] // diagonales
+  ];
+  
+  for (const line of lines) {
+    const [a, b, c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return board[a]; // retorna 1 o 2
+    }
+  }
+  
+  return null;
+}
+
+// Verificar si es empate
+function isDraw() {
+  return tictactoeState.board.every(cell => cell !== null);
+}
+
+// Manejar clic en celda
+function handleCellClick(index) {
+  if (!tictactoeState.gameActive || tictactoeState.board[index] !== null) {
+    return;
+  }
+  
+  // Marcar celda
+  tictactoeState.board[index] = tictactoeState.currentPlayer;
+  const cell = $(`.tictactoe-cell[data-index="${index}"]`);
+  const currentPlayer = tictactoeState.currentPlayer === 1 ? tictactoeState.player1 : tictactoeState.player2;
+  
+  cell.addClass('played');
+  cell.html(`<img src="${currentPlayer.img}" alt="${currentPlayer.name}" />`);
+  
+  // Reproducir sonido
+  const pokemonId = String(currentPlayer.id).padStart(3, '0');
+  playPokemonSound(pokemonId, currentPlayer.sound);
+  
+  // Verificar victoria
+  const winner = checkWinner();
+  if (winner) {
+    tictactoeState.gameActive = false;
+    tictactoeState.stats[`player${winner}Wins`]++;
+    updateStatsUI();
+    
+    const winnerPokemon = winner === 1 ? tictactoeState.player1 : tictactoeState.player2;
+    showNotification(`¡${winnerPokemon.name} ha ganado!`, "success");
+    return;
+  }
+  
+  // Verificar empate
+  if (isDraw()) {
+    tictactoeState.gameActive = false;
+    showNotification("¡Empate!", "info");
+    return;
+  }
+  
+  // Cambiar turno
+  tictactoeState.currentPlayer = tictactoeState.currentPlayer === 1 ? 2 : 1;
+  updateCurrentPlayerUI();
+}
+
+// Iniciar nuevo juego
+function startNewGame() {
+  tictactoeState.board = Array(9).fill(null);
+  tictactoeState.currentPlayer = 1;
+  tictactoeState.gameActive = true;
+  
+  createTicTacToeBoard();
+  updateCurrentPlayerUI();
+}
+
+// Verificar si se puede iniciar el juego
+function checkCanStartGame() {
+  const canStart = tictactoeState.player1 && tictactoeState.player2;
+  $('#start-tictactoe-btn').prop('disabled', !canStart);
+}
+
+// Actualizar UI del jugador seleccionado
+function updatePlayerUI(playerNum, pokemon) {
+  const container = $(`#player${playerNum}-selected`);
+  if (pokemon) {
+    container.html(`
+      <img src="${pokemon.img}" alt="${pokemon.name}" />
+      <span>${pokemon.name}</span>
+    `);
+  } else {
+    container.html('<div class="placeholder">Sin Pokémon seleccionado</div>');
+  }
+}
+
+// Autocompletado específico para Tic Tac Toe
+function showTicTacToeAutocomplete(playerNum, filteredPokemons) {
+  const dropdown = $(`#player${playerNum}-autocomplete`);
+  dropdown.empty();
+  
+  if (filteredPokemons.length === 0) {
+    dropdown.hide();
+    return;
+  }
+  
+  filteredPokemons.forEach((pokemon, index) => {
+    const item = $(`
+      <div class="autocomplete-item" data-id="${pokemon.id}" data-name="${pokemon.name}">
+        <span class="pokemon-name">${pokemon.name}</span>
+        <span class="pokemon-id">#${pokemon.id.toString().padStart(3, '0')}</span>
+      </div>
+    `);
+    dropdown.append(item);
+  });
+  
+  dropdown.show();
+}
+
+// Seleccionar Pokémon para jugador
+async function selectPlayerPokemon(playerNum, pokemonId, pokemonName) {
+  // Verificar que no sea el mismo Pokémon que el otro jugador
+  const otherPlayer = playerNum === 1 ? tictactoeState.player2 : tictactoeState.player1;
+  if (otherPlayer && otherPlayer.id === pokemonId) {
+    showNotification("No puedes seleccionar el mismo Pokémon que el otro jugador.", "info");
+    return;
+  }
+  
+  // Obtener datos completos del Pokémon
+  const pokemon = await fetchPokemonByIdOrName(pokemonId);
+  if (pokemon) {
+    tictactoeState[`player${playerNum}`] = pokemon;
+    updatePlayerUI(playerNum, pokemon);
+    updateStatsUI();
+    checkCanStartGame();
+    
+    $(`#player${playerNum}-search`).val('');
+    $(`#player${playerNum}-autocomplete`).hide();
+  }
+}
+
+function wireTicTacToeHandlers() {
+  // Input de búsqueda para jugador 1
+  $(document).on('input', '#player1-search', function() {
+    const query = $(this).val();
+    const filtered = filterPokemons(query);
+    showTicTacToeAutocomplete(1, filtered);
+  });
+  
+  // Input de búsqueda para jugador 2
+  $(document).on('input', '#player2-search', function() {
+    const query = $(this).val();
+    const filtered = filterPokemons(query);
+    showTicTacToeAutocomplete(2, filtered);
+  });
+  
+  // Click en autocompletado para jugador 1
+  $(document).on('click', '#player1-autocomplete .autocomplete-item', function() {
+    const pokemonId = $(this).data('id');
+    const pokemonName = $(this).data('name');
+    selectPlayerPokemon(1, pokemonId, pokemonName);
+  });
+  
+  // Click en autocompletado para jugador 2
+  $(document).on('click', '#player2-autocomplete .autocomplete-item', function() {
+    const pokemonId = $(this).data('id');
+    const pokemonName = $(this).data('name');
+    selectPlayerPokemon(2, pokemonId, pokemonName);
+  });
+  
+  // Navegación con teclado para jugador 1
+  $(document).on('keydown', '#player1-search', function(e) {
+    const items = $('#player1-autocomplete .autocomplete-item');
+    if (items.length === 0) return;
+    
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      // Implementar navegación similar a memorize
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const selectedItem = items.filter('.selected');
+      if (selectedItem.length > 0) {
+        const pokemonId = selectedItem.data('id');
+        const pokemonName = selectedItem.data('name');
+        selectPlayerPokemon(1, pokemonId, pokemonName);
+      }
+    } else if (e.key === 'Escape') {
+      $('#player1-autocomplete').hide();
+    }
+  });
+  
+  // Navegación con teclado para jugador 2
+  $(document).on('keydown', '#player2-search', function(e) {
+    const items = $('#player2-autocomplete .autocomplete-item');
+    if (items.length === 0) return;
+    
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      // Implementar navegación similar a memorize
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const selectedItem = items.filter('.selected');
+      if (selectedItem.length > 0) {
+        const pokemonId = selectedItem.data('id');
+        const pokemonName = selectedItem.data('name');
+        selectPlayerPokemon(2, pokemonId, pokemonName);
+      }
+    } else if (e.key === 'Escape') {
+      $('#player2-autocomplete').hide();
+    }
+  });
+  
+  // Ocultar autocompletado al hacer click fuera
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.search-container').length) {
+      $('.autocomplete-dropdown').hide();
+    }
+  });
+  
+  // Empezar juego
+  $(document).on('click', '#start-tictactoe-btn', function() {
+    $('#tictactoe-setup').hide();
+    $('#tictactoe-game').show();
+    startNewGame();
+  });
+  
+  // Nuevo juego
+  $(document).on('click', '#new-game-btn', function() {
+    $('#tictactoe-game').hide();
+    $('#tictactoe-setup').show();
+  });
+  
+  // Click en celda del tablero
+  $(document).on('click', '.tictactoe-cell', function() {
+    const index = $(this).data('index');
+    handleCellClick(index);
+  });
 }
