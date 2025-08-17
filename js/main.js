@@ -51,9 +51,7 @@ const getPokemon = () => {
       img: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${res.id}.png`,
       sound: res.cries.latest
     };
-    pokemonSelected = pokemon;
-    console.log(pokemon);
-    
+    pokemonSelected = pokemon;    
     // Animar la imagen
     pokemonImage.src = pokemon.img;
     pokemonImage.title = pokemon.name;
@@ -76,25 +74,6 @@ const getPokemon = () => {
     pokemonImage.style.filter = "brightness(0) invert(0)";
   });
 };
-
-let timerInterval = null;
-function startProgressBar() {
-  let seconds = 5;
-  const barText = document.getElementById("progress-bar-text");
-  const barFill = document.getElementById("progress-bar-fill");
-  if (timerInterval) clearInterval(timerInterval);
-  barText.textContent = seconds;
-  barFill.style.width = "100%";
-  timerInterval = setInterval(() => {
-    seconds--;
-    barText.textContent = seconds;
-    barFill.style.width = (seconds/5*100) + "%";
-    if (seconds <= 0) {
-      clearInterval(timerInterval);
-      getPokemon();
-    }
-  }, 1000);
-}
 
 // Llama a startProgressBar cada vez que se muestra un nuevo Pokémon
 function getPokemonWithTimer() {
@@ -481,6 +460,12 @@ $(document).ready(function () {
     $(".nav-link").removeClass("active");
     $(".nav-link[data-nav='games']").addClass("active");
   });
+  $("[data-game='rompecabezas']").on("click", function(e){
+    e.preventDefault();
+    showSection("#section-rompecabezas");
+    $(".nav-link").removeClass("active");
+    $(".nav-link[data-nav='games']").addClass("active");
+  });
 
   $(document).on("click", ".back-to-games", function(e){
     e.preventDefault();
@@ -593,9 +578,15 @@ function renderMemoryBoard() {
 
   // Renderizar cartas
   for (const card of memorizeState.deck) {
-    const $card = $(`
-      <div class="memory-card" data-id="${card.id}" data-key="${card.key}" data-sound="${card.sound ? card.sound : ''}">
-        <div class="card-face card-back">?</div>
+    let backContent = '?';
+    let backClass = 'card-face card-back';
+    if (window.helpMode || window.manualHelpMode) {
+      backContent = '';
+      backClass += ' no-question';
+    }
+    const $card = $(
+      `<div class="memory-card" data-id="${card.id}" data-key="${card.key}" data-sound="${card.sound ? card.sound : ''}">
+        <div class="${backClass}">${backContent}</div>
         <div class="card-face card-front"><img src="${card.img}" alt="${card.name}" /></div>
       </div>
     `);
@@ -1205,3 +1196,578 @@ function wireTicTacToeHandlers() {
     handleCellClick(index);
   });
 }
+
+// Puzzle Game - Rompecabezas Pokémon
+document.addEventListener("DOMContentLoaded", () => {
+  const puzzleBoard = document.getElementById("puzzle-board");
+  const piecesContainer = document.getElementById("puzzle-pieces");
+  const uploadInput = document.getElementById("puzzle-upload");
+  const piecesPlacedElement = document.getElementById("pieces-placed");
+  const totalPiecesElement = document.getElementById("total-pieces");
+  
+  // Elementos para la búsqueda de Pokémon
+  const modeTabs = document.querySelectorAll('.mode-tab');
+  const uploadPanel = document.getElementById('puzzle-upload-panel');
+  const searchPanel = document.getElementById('puzzle-search-panel');
+  const searchInput = document.getElementById('puzzle-search-input');
+  const autocompleteDropdown = document.getElementById('puzzle-autocomplete');
+
+  let draggedPiece = null;
+  let piecesPlaced = 0;
+  const rows = 4;
+  const cols = 5;
+  const totalPieces = rows * cols;
+  let helpMode = false;
+  let helpTimeout = null;
+  let manualHelpMode = false; // Nuevo: modo de ayuda manual
+
+  // Inicializar contadores
+  if (totalPiecesElement) {
+    totalPiecesElement.textContent = totalPieces;
+  }
+  if (piecesPlacedElement) {
+    piecesPlacedElement.textContent = piecesPlaced;
+  }
+
+  // Cambio entre modos
+  modeTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.mode;
+      
+      // Actualizar tabs activos
+      modeTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      // Mostrar/ocultar paneles
+      if (mode === 'upload') {
+        uploadPanel.style.display = 'flex';
+        searchPanel.style.display = 'none';
+      } else if (mode === 'search') {
+        uploadPanel.style.display = 'none';
+        searchPanel.style.display = 'flex';
+      }
+    });
+  });
+
+  // Checkbox para modo de ayuda manual
+  const helpCheckbox = document.getElementById('help-mode-checkbox');
+  if (helpCheckbox) {
+    helpCheckbox.addEventListener('change', (e) => {
+      manualHelpMode = e.target.checked;
+      if (manualHelpMode) {
+        activateManualHelpMode();
+      } else {
+        deactivateManualHelpMode();
+      }
+    });
+  }
+
+  // Subida de archivo
+  if (uploadInput) {
+    uploadInput.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const imageURL = URL.createObjectURL(file);
+      generatePuzzle(imageURL);
+    });
+  }
+
+  // Búsqueda de Pokémon
+  if (searchInput) {
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      
+      clearTimeout(searchTimeout);
+      
+      if (query.length < 2) {
+        autocompleteDropdown.innerHTML = '';
+        autocompleteDropdown.style.display = 'none';
+        return;
+      }
+      
+      searchTimeout = setTimeout(() => {
+        searchPokemon(query);
+      }, 300);
+    });
+    
+    // Cerrar autocomplete al hacer clic fuera
+    document.addEventListener('click', (e) => {
+      if (!searchInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
+        autocompleteDropdown.style.display = 'none';
+      }
+    });
+  }
+
+  async function searchPokemon(query) {
+    try {
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=1000`);
+      const data = await response.json();
+      
+      const filteredPokemon = data.results
+        .filter(pokemon => pokemon.name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 10); // Limitar a 10 resultados
+      
+      displayAutocomplete(filteredPokemon);
+    } catch (error) {
+      console.error('Error buscando Pokémon:', error);
+    }
+  }
+
+  function displayAutocomplete(pokemonList) {
+    autocompleteDropdown.innerHTML = '';
+    
+    if (pokemonList.length === 0) {
+      autocompleteDropdown.style.display = 'none';
+      return;
+    }
+    
+    pokemonList.forEach(pokemon => {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.textContent = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+      item.addEventListener('click', () => {
+        selectPokemon(pokemon.name);
+        autocompleteDropdown.style.display = 'none';
+        searchInput.value = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+      });
+      autocompleteDropdown.appendChild(item);
+    });
+    
+    autocompleteDropdown.style.display = 'block';
+  }
+
+  async function selectPokemon(pokemonName) {
+    try {
+      showNotification(`Cargando ${pokemonName}...`, "info");
+      
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName.toLowerCase()}`);
+      const pokemon = await response.json();
+      pokemonSelected = pokemon; // Guardar Pokémon seleccionado globalmente      
+      
+      const imageURL = pokemon.sprites.other['official-artwork'].front_default;
+      
+      if (imageURL) {
+        generatePuzzle(imageURL);
+        showNotification(`¡Rompecabezas de ${pokemon.name} creado!`, "success");
+      } else {
+        showNotification("No se pudo cargar la imagen del Pokémon", "warning");
+      }
+    } catch (error) {
+      console.error('Error cargando Pokémon:', error);
+      showNotification("Error al cargar el Pokémon", "warning");
+    }
+  }
+
+  function generatePuzzle(imageURL) {
+    if (!puzzleBoard || !piecesContainer) return;
+    
+    puzzleBoard.innerHTML = '';
+    piecesContainer.innerHTML = '';
+    piecesPlaced = 0;
+    if (piecesPlacedElement) {
+      piecesPlacedElement.textContent = piecesPlaced;
+    }
+    
+    // Limpiar modo de ayuda automático
+    helpMode = false;
+    
+    // Si el modo de ayuda manual está activo, activarlo para el nuevo rompecabezas
+    if (manualHelpMode) {
+      setTimeout(() => {
+        activateManualHelpMode();
+      }, 100);
+    }
+
+    const positions = [];
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        positions.push({ x, y });
+      }
+    }
+
+    const shuffled = [...positions].sort(() => Math.random() - 0.5);
+
+    // Crear slots
+    positions.forEach(({ x, y }) => {
+      const slot = document.createElement('div');
+      slot.classList.add('puzzle-slot');
+      slot.dataset.x = x;
+      slot.dataset.y = y;
+      puzzleBoard.appendChild(slot);
+    });
+
+    // Crear piezas
+    shuffled.forEach(({ x, y }) => {
+      const piece = document.createElement('div');
+      piece.classList.add('puzzle-piece');
+      piece.setAttribute('draggable', 'true');
+      piece.style.backgroundImage = `url('${imageURL}')`;
+      piece.style.backgroundPosition = `-${x * 80}px -${y * 80}px`;
+      piece.dataset.correctX = x;
+      piece.dataset.correctY = y;
+      piecesContainer.appendChild(piece);
+    });
+  }
+
+  // Drag & Drop
+  document.addEventListener('dragstart', e => {
+    if (e.target.classList.contains('puzzle-piece')) {
+      draggedPiece = e.target;
+      e.target.style.opacity = '0.5';
+      
+      // Si el modo de ayuda manual o automático está activo, resaltar la posición correcta
+      if (manualHelpMode || helpMode) {
+        const pieceX = +e.target.dataset.correctX;
+        const pieceY = +e.target.dataset.correctY;
+        highlightCorrectSlot(pieceX, pieceY);
+      }
+    }
+  });
+
+  document.addEventListener('dragend', e => {
+    if (e.target.classList.contains('puzzle-piece')) {
+      e.target.style.opacity = '1';
+      
+      // Remover resaltado de ayuda al soltar la pieza
+      if (manualHelpMode || helpMode) {
+        clearHelpHighlight();
+      }
+    }
+  });
+
+  document.addEventListener('dragover', e => {
+    if (e.target.classList.contains('puzzle-slot')) {
+      e.preventDefault();
+      
+      // Si el modo de ayuda está activo y hay una pieza siendo arrastrada
+      if ((manualHelpMode || helpMode) && draggedPiece) {
+        const pieceX = +draggedPiece.dataset.correctX;
+        const pieceY = +draggedPiece.dataset.correctY;
+        const slotX = +e.target.dataset.x;
+        const slotY = +e.target.dataset.y;
+        
+        // Si la pieza está sobre su posición correcta, resaltar más intensamente
+        if (pieceX === slotX && pieceY === slotY) {
+          e.target.classList.add('correct-position-highlight');
+        } else {
+          e.target.classList.remove('correct-position-highlight');
+        }
+      }
+    }
+  });
+
+  document.addEventListener('drop', e => {
+    if (e.target.classList.contains('puzzle-slot') && draggedPiece) {
+      const slotX = +e.target.dataset.x;
+      const slotY = +e.target.dataset.y;
+      const pieceX = +draggedPiece.dataset.correctX;
+      const pieceY = +draggedPiece.dataset.correctY;
+
+      // Limpiar resaltados de ayuda
+      clearHelpHighlight();
+      e.target.classList.remove('correct-position-highlight');
+
+      if (slotX === pieceX && slotY === pieceY) {
+        // Pieza colocada correctamente
+        e.target.appendChild(draggedPiece);
+        draggedPiece.style.position = 'relative';
+        draggedPiece.style.left = '0';
+        draggedPiece.style.top = '0';
+        draggedPiece.setAttribute('draggable', 'false');
+        draggedPiece.classList.add('placed');
+        e.target.classList.add('correct');
+        
+        piecesPlaced++;
+        if (piecesPlacedElement) {
+          piecesPlacedElement.textContent = piecesPlaced;
+        }
+        
+        // Verificar si el rompecabezas está completo
+        if (piecesPlaced === totalPieces) {
+          setTimeout(() => {
+            showNotification("¡Rompecabezas completado! ¡Excelente trabajo!", "success");
+            let pokemonId = String(pokemonSelected.id).padStart(3, '0');
+            if (pokemonId === "025") {
+              pokemonId = "0000"; // Pikachu es especial
+            }
+            playPokemonSound(pokemonId, pokemonSelected.cries.latest);            
+            // Limpiar modo de ayuda
+            clearHelpMode();
+          }, 100);
+        } else {
+          // Verificar si quedan espacios en blanco y activar ayuda
+          checkForWhiteSpaces();
+        }
+      } else {
+        // Pieza colocada incorrectamente
+        piecesContainer.appendChild(draggedPiece);
+        showNotification("Esa pieza no va ahí. ¡Inténtalo de nuevo!", "warning");
+      }
+      draggedPiece = null;
+    }
+  });
+
+  function checkForWhiteSpaces() {
+    const remainingPieces = piecesContainer.children.length;
+    const whiteSpaceThreshold = Math.ceil(totalPieces * 0.3); // 30% de piezas restantes
+    
+    if (remainingPieces <= whiteSpaceThreshold && !helpMode && !manualHelpMode) {
+      // Activar modo de ayuda automático
+      // activateHelpMode();
+    }
+  }
+
+  function activateHelpMode() {
+    helpMode = true;
+    showNotification("¡Modo de ayuda automático activado! Arrastra las piezas resaltadas para ver dónde van", "info");
+    
+    // Resaltar piezas en blanco
+    highlightWhitePieces();
+    
+    // Mostrar botón de ayuda
+    showHelpButton();
+  }
+
+  function highlightWhitePieces() {
+    const pieces = piecesContainer.querySelectorAll('.puzzle-piece');
+    
+    pieces.forEach(piece => {
+      const pieceX = +piece.dataset.correctX;
+      const pieceY = +piece.dataset.correctY;
+      
+      // Verificar si esta pieza corresponde a un área en blanco
+      // if (isWhiteSpacePiece(pieceX, pieceY)) {
+      //   piece.classList.add('white-space-piece');
+      //   piece.style.border = '3px solid #ff6b6b';
+      //   piece.style.boxShadow = '0 0 10px rgba(255, 107, 107, 0.5)';
+      // }
+    });
+  }
+
+  function isWhiteSpacePiece(x, y) {
+    // Esta función verifica si una pieza corresponde a un área en blanco
+    // Las piezas en las esquinas y bordes son más propensas a ser blancas
+    const isCorner = (x === 0 && y === 0) || (x === cols - 1 && y === 0) || 
+                     (x === 0 && y === rows - 1) || (x === cols - 1 && y === rows - 1);
+    const isEdge = x === 0 || x === cols - 1 || y === 0 || y === rows - 1;
+    
+    // También considerar piezas en posiciones específicas que suelen ser blancas
+    const isLikelyWhite = isCorner || isEdge || 
+                         (x === 1 && y === 0) || (x === cols - 2 && y === 0) ||
+                         (x === 0 && y === 1) || (x === cols - 1 && y === 1);
+    
+    return isLikelyWhite;
+  }
+
+  function showHelpButton() {
+    // Crear botón de ayuda si no existe
+    if (!document.getElementById('help-button')) {
+      const helpButton = document.createElement('button');
+      helpButton.id = 'help-button';
+      helpButton.className = 'help-button';
+      helpButton.innerHTML = '💡 Cómo usar la ayuda';
+      helpButton.addEventListener('click', showHint);
+      
+      // Insertar después del contenedor de piezas
+      const puzzleSection = document.querySelector('.puzzle-section:last-child');
+      puzzleSection.appendChild(helpButton);
+    }
+  }
+
+  function showHint() {
+    showNotification("Modo de ayuda activo: Arrastra una pieza para ver dónde va", "info");
+  }
+
+  // Nueva función para resaltar el slot correspondiente (para pistas)
+  function highlightSlot(x, y) {
+    // Remover resaltado anterior
+    const previousHighlight = puzzleBoard.querySelector('.slot-highlight');
+    if (previousHighlight) {
+      previousHighlight.classList.remove('slot-highlight');
+    }
+    
+    // Encontrar y resaltar el slot correcto
+    const targetSlot = puzzleBoard.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+    if (targetSlot) {
+      targetSlot.classList.add('slot-highlight');
+      
+      // Remover resaltado después de 3 segundos
+      setTimeout(() => {
+        targetSlot.classList.remove('slot-highlight');
+      }, 3000);
+    }
+  }
+
+  // Nueva función para resaltar la posición correcta durante el drag
+  function highlightCorrectSlot(x, y) {
+    // Remover resaltado anterior
+    clearHelpHighlight();
+    
+    // Encontrar y resaltar el slot correcto
+    const targetSlot = puzzleBoard.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+    if (targetSlot) {
+      targetSlot.classList.add('help-highlight');
+    }
+  }
+
+  // Nueva función para limpiar resaltados de ayuda
+  function clearHelpHighlight() {
+    const helpHighlights = puzzleBoard.querySelectorAll('.help-highlight');
+    helpHighlights.forEach(slot => {
+      slot.classList.remove('help-highlight');
+    });
+    
+    const correctPositionHighlights = puzzleBoard.querySelectorAll('.correct-position-highlight');
+    correctPositionHighlights.forEach(slot => {
+      slot.classList.remove('correct-position-highlight');
+    });
+  }
+
+  function clearHelpMode() {
+    helpMode = false;
+    
+    // Remover resaltado de piezas en blanco
+    const whitePieces = piecesContainer.querySelectorAll('.white-space-piece');
+    whitePieces.forEach(piece => {
+      piece.classList.remove('white-space-piece');
+      piece.style.border = '';
+      piece.style.boxShadow = '';
+    });
+    
+    // Remover botón de ayuda
+    const helpButton = document.getElementById('help-button');
+    if (helpButton) {
+      helpButton.remove();
+    }
+  }
+
+  // Nueva función para activar modo de ayuda manual
+  function activateManualHelpMode() {
+    if (!manualHelpMode) return;
+    
+    // Resaltar todas las piezas disponibles
+    const pieces = piecesContainer.querySelectorAll('.puzzle-piece');
+    // pieces.forEach(piece => {
+    //   piece.classList.add('white-space-piece');
+    //   piece.style.border = '3px solid #ff6b6b';
+    //   piece.style.boxShadow = '0 0 10px rgba(255, 107, 107, 0.5)';
+    // });
+    
+    showNotification("Modo de ayuda activado: Arrastra cualquier pieza para ver dónde va", "info");
+  }
+
+  // Nueva función para desactivar modo de ayuda manual
+  function deactivateManualHelpMode() {
+    // Remover resaltado de todas las piezas
+    const pieces = piecesContainer.querySelectorAll('.white-space-piece');
+    pieces.forEach(piece => {
+      piece.classList.remove('white-space-piece');
+      piece.style.border = '';
+      piece.style.boxShadow = '';
+    });
+    
+    // Remover botón de ayuda
+    const helpButton = document.getElementById('help-button');
+    if (helpButton) {
+      helpButton.remove();
+    }
+    
+    // Limpiar todos los resaltados de ayuda
+    clearHelpHighlight();
+    
+    // Remover resaltado de slots de pistas
+    const highlightedSlots = puzzleBoard.querySelectorAll('.slot-highlight');
+    highlightedSlots.forEach(slot => {
+      slot.classList.remove('slot-highlight');
+    });
+    
+    showNotification("Modo de ayuda manual desactivado.", "info");
+  }
+
+  // Función para mostrar notificaciones
+  function showNotification(message, type = 'info') {
+    // Crear elemento de notificación
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#4CAF50' : type === 'warning' ? '#ff9800' : '#2196F3'};
+      color: white;
+      padding: 15px 20px;
+      border-radius: 5px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remover después de 3 segundos
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
+  }
+
+  // Agregar estilos de animación si no existen
+  if (!document.querySelector('#puzzle-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'puzzle-notification-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+      .slot-highlight {
+        background: rgba(255, 107, 107, 0.3) !important;
+        border: 3px solid #ff6b6b !important;
+        box-shadow: 0 0 15px rgba(255, 107, 107, 0.7) !important;
+        animation: slotPulse 1s ease-in-out infinite;
+      }
+      
+      .help-highlight {
+        background: rgba(59, 76, 202, 0.4) !important;
+        border: 3px solid #3b4cca !important;
+        box-shadow: 0 0 20px rgba(59, 76, 202, 0.8) !important;
+        animation: helpPulse 1.5s ease-in-out infinite;
+      }
+      
+      .correct-position-highlight {
+        background: rgba(46, 213, 115, 0.5) !important;
+        border: 4px solid #2ed573 !important;
+        box-shadow: 0 0 25px rgba(46, 213, 115, 0.9) !important;
+        animation: correctPulse 0.8s ease-in-out infinite;
+      }
+      
+      @keyframes slotPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      
+      @keyframes helpPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.08); opacity: 0.8; }
+      }
+      
+      @keyframes correctPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+});

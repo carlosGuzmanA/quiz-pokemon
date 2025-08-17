@@ -28,6 +28,7 @@
                     <div class="dropdown-menu">
                         <a href="#" data-game="tictactoe">Tic Tac Toe</a>
                         <a href="#" data-game="memorize">Memoriza</a>
+                        <a href="#" data-game="rompecabezas">Rompecabezas</a>
                     </div>
                 </div>
             </div>
@@ -107,6 +108,10 @@
             <div class="game-card" data-game="memorize">
                 <h3>Memoriza</h3>
                 <p>Encuentra las parejas de Pokémon.</p>
+            </div>
+            <div class="game-card" data-game="rompecabezas">
+                <h3>Rompecabezas</h3>
+                <p>Encuentra las piezas de Pokémon.</p>
             </div>
         </div>
     </section>
@@ -216,7 +221,78 @@
             <div id="memorize-board" class="memory-grid"></div>
         </div>
     </section>
-    
+
+    <section id="section-rompecabezas" class="section">
+        <div class="game-wrapper">
+            <button class="back-to-games">← Volver a Juegos</button>
+            <h2>Rompecabezas Pokémon</h2>
+            
+            <div class="puzzle-controls">
+                <div class="puzzle-modes">
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" data-mode="upload">Subir imagen</button>
+                        <button class="mode-tab" data-mode="search">Buscar Pokémon</button>
+                    </div>
+                </div>
+                
+                <div class="puzzle-help-controls">
+                    <label class="help-checkbox-label">
+                        <input type="checkbox" id="help-mode-checkbox">
+                        <span class="checkmark"></span>
+                        Activar modo de ayuda
+                    </label>
+                    <div class="help-info">
+                        <p>💡 El modo de ayuda te permite obtener pistas en cualquier momento</p>
+                    </div>
+                </div>
+                
+                <div class="puzzle-upload-panel" id="puzzle-upload-panel">
+                    <div class="puzzle-upload">
+                        <label for="puzzle-upload" class="upload-label">
+                            <span class="upload-icon">📁</span>
+                            Seleccionar imagen
+                        </label>
+                        <input type="file" id="puzzle-upload" accept="image/*" />
+                    </div>
+                    <div class="puzzle-info">
+                        <p>Sube una imagen de Pokémon para crear un rompecabezas interactivo</p>
+                    </div>
+                </div>
+                
+                <div class="puzzle-search-panel" id="puzzle-search-panel" style="display: none;">
+                    <div class="search-container">
+                        <input type="text" id="puzzle-search-input" placeholder="Buscar Pokémon por nombre..." />
+                        <div id="puzzle-autocomplete" class="autocomplete-dropdown"></div>
+                    </div>
+                    <div class="puzzle-info">
+                        <p>Busca un Pokémon por nombre para crear un rompecabezas automáticamente</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="puzzle-container">
+                <div class="puzzle-section">
+                    <h3 class="puzzle-section-title">Tablero</h3>
+                    <div id="puzzle-board" class="puzzle-board"></div>
+                </div>
+                <div class="puzzle-section">
+                    <h3 class="puzzle-section-title">Piezas</h3>
+                    <div id="puzzle-pieces" class="puzzle-pieces"></div>
+                </div>
+            </div>
+            
+            <div class="puzzle-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Piezas colocadas:</span>
+                    <span id="pieces-placed" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total piezas:</span>
+                    <span id="total-pieces" class="stat-value">0</span>
+                </div>
+            </div>
+        </div>
+    </section>
     <!-- JQUERY -->
     <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
     <!-- MAIN JS FILE -->
